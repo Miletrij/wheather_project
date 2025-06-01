@@ -1,5 +1,7 @@
-<!DOCTYPE html>
-<html lang="ru">
+
+{% load static %}
+
+{% block content %}
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -29,78 +31,112 @@
         }
     </style>
 </head>
-<body>
-<div class="container mt-5">
+<div class="container mt-4">
+    <h1 class="mb-4">Погодный сервис</h1>
+    
+    <!-- Форма поиска с автодополнением -->
+    <form method="POST" class="mb-4">
+        {% csrf_token %}
+        <div class="form-group autocomplete">
+            <label for="city">Город</label>
+            <input type="text" class="form-control" id="city" name="city" 
+                   placeholder="Начните вводить название города" required autocomplete="off">
+            <div id="autocomplete-list" class="autocomplete-items"></div>
+        </div>
+        <button type="submit" class="btn btn-primary mt-2">Узнать погоду</button>
+    </form>
+
+    <!-- Блок с последними поисками пользователя -->
+    {% if recent_searches %}
+    <div class="card mb-4">
+        <div class="card-header">
+            Ваши недавние поиски
+        </div>
+        <div class="card-body">
+            {% for search in recent_searches %}
+            <form method="POST" class="d-inline-block me-2 mb-2">
+                {% csrf_token %}
+                <input type="hidden" name="city" value="{{ search.city }}">
+                <button type="submit" class="btn btn-sm btn-outline-primary position-relative">
+                    {{ search.city }}
+                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-info">
+                        {{ search.count }}
+                        <span class="visually-hidden">раз искали</span>
+                    </span>
+                </button>
+            </form>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Блок с текущей погодой -->
+    {% if weather_data %}
+    <div class="card mb-4">
+        <div class="card-header">
+            Погода в {{ weather_data.city }}
+        </div>
+        <div class="card-body">
+            <h3 class="card-title">{{ weather_data.temperature }}°C</h3>
+            <p class="card-text">Скорость ветра: {{ weather_data.windspeed }} км/ч</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Блоки статистики -->
     <div class="row">
-        <div class="col-md-6 offset-md-3">
+        <div class="col-md-6">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h2 class="text-center">Погодный сервис</h2>
+                <div class="card-header">
+                    Популярные города
                 </div>
-                <div class="card-body">
-                    <form method="POST">
-                        {% csrf_token %}
-                        <div class="mb-3 autocomplete">
-                            <label for="city" class="form-label">Введите город:</label>
-                            <input type="text" class="form-control" id="city" name="city" required autocomplete="off">
-                            <div id="autocomplete-list" class="autocomplete-items"></div>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100">Узнать погоду</button>
-                    </form>
-
-                    {% if weather_data %}
-                    <div class="mt-4">
-                        <h3 class="text-center">Погода в {{ weather_data.city }}</h3>
-                        <div class="alert alert-info">
-                            <p><strong>Температура:</strong> {{ weather_data.temperature }}°C</p>
-                            <p><strong>Скорость ветра:</strong> {{ weather_data.windspeed }} км/ч</p>
-                            <!-- Можно добавить описание погоды по коду weathercode -->
+                <div class="card-body" id="popular-cities">
+                    <!-- Заполняется через AJAX -->
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Загрузка...</span>
                         </div>
                     </div>
-                    {% endif %}
-
-                    {% if error %}
-                    <div class="alert alert-danger mt-3">
-                        {{ error }}
-                    </div>
-                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+{% endblock %}
 <script>
-    $(document).ready(function() {
-        var currentFocus;
+$(document).ready(function() {
+    var currentFocus;
 
-        $("#city").on("input", function() {
-            var query = $(this).val();
-            if (query.length < 2) {
-                $("#autocomplete-list").empty();
-                return;
-            }
+    $("#city").on("input", function() {
+        var query = $(this).val();
+        if (query.length < 2) {
+            $("#autocomplete-list").empty();
+            return;
+        }
 
-            $.get("/autocomplete/", {query: query}, function(data) {
-                $("#autocomplete-list").empty();
+        $.get("/autocomplete/", {query: query}, function(data) {
+            $("#autocomplete-list").empty();
 
-                data.results.forEach(function(city) {
-                    $("<div>")
-                        .append($("<strong>").text(city))
-                        .appendTo("#autocomplete-list")
-                        .on("click", function() {
-                            $("#city").val(city);
-                            $("#autocomplete-list").empty();
-                        });
-                });
+            data.results.forEach(function(city) {
+                $("<div>")
+                    .append($("<strong>").text(city))
+                    .appendTo("#autocomplete-list")
+                    .on("click", function() {
+                        $("#city").val(city);
+                        $("#autocomplete-list").empty();
+                    });
             });
         });
-
-        $(document).on("click", function(e) {
-            if (!$(e.target).closest(".autocomplete").length) {
-                $("#autocomplete-list").empty();
-            }
-        });
     });
+
+    $(document).on("click", function(e) {
+        if (!$(e.target).closest(".autocomplete").length) {
+            $("#autocomplete-list").empty();
+        }
+    });
+});
 </script>
-</body>
-</html>
+{% block extra_js %}
+<!-- Подключаем наш JavaScript -->
+<script src="{% static 'js/app.js' %}"></script>
+{% endblock %}
