@@ -40,3 +40,22 @@ def weather_view(request):
                 context['error'] = "Город не найден"
 
     return render(request, 'weather/index.html', context)
+
+
+
+from django.http import JsonResponse
+from django.views.decorators.http import require_GET
+
+@require_GET
+def city_autocomplete(request):
+    query = request.GET.get('query', '')
+    if len(query) < 2:
+        return JsonResponse({'results': []})
+
+    try:
+        url = f"https://geocoding-api.open-meteo.com/v1/search?name={query}&count=5"
+        response = requests.get(url).json()
+        suggestions = [result['name'] for result in response.get('results', [])]
+        return JsonResponse({'results': suggestions})
+    except requests.RequestException:
+        return JsonResponse({'results': []})
