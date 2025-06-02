@@ -2,10 +2,9 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
 from django.views.generic import TemplateView
 from django.http import JsonResponse
-from django.db.models import Count, Max
+from django.db.models import Count
 from .models import CitySearch, CityPopularity
 import requests
-from django.utils.timezone import now
 from django.contrib.auth import get_user_model
 from django.views.decorators.http import require_GET
 
